@@ -1,6 +1,12 @@
 import type { TokenResponse, User, MessageResponse } from "@/types/auth";
 import axiosMain from "@/lib/axiosMain";
 import type { AppPlatform, AppSlot, AppUploadTicket } from "@/types/app-downloads";
+import type {
+  AdminPackageCatalog,
+  AdminPaymentStatus,
+  AdminUsageHistory,
+  UserAllowanceReport,
+} from "@/types/applicationPackages";
 
 function authHeader(accessToken: string) {
   return { headers: { Authorization: `Bearer ${accessToken}` } };
@@ -346,6 +352,25 @@ export const admin = {
       .then((r) => r.data),
   removeAppDownload: (platform: AppPlatform, token?: string): Promise<void> =>
     axiosMain.delete(`/admin/app-downloads/${platform}`, authConfig(token)).then(() => undefined),
+
+  // Application packages — READ-ONLY draft commerce surface (Stage 5 contract).
+  // Independent of AI credit plans: never publishes, prices, activates charges
+  // or mutates anything. Backend refuses these routes with 404 when
+  // APPLICATION_COMMERCE_ENABLED=false, 403 for non-admins.
+  getApplicationPackages: (token?: string): Promise<AdminPackageCatalog> =>
+    axiosMain.get("/admin/application-packages", authConfig(token)).then((r) => r.data),
+  getApplicationPackageUserReport: (userId: string, token?: string): Promise<UserAllowanceReport> =>
+    axiosMain
+      .get(`/admin/application-packages/users/${userId}`, authConfig(token))
+      .then((r) => r.data),
+  getApplicationPackageUserUsage: (userId: string, token?: string): Promise<AdminUsageHistory> =>
+    axiosMain
+      .get(`/admin/application-packages/users/${userId}/usage`, authConfig(token))
+      .then((r) => r.data),
+  getApplicationPackageUserPayments: (userId: string, token?: string): Promise<AdminPaymentStatus> =>
+    axiosMain
+      .get(`/admin/application-packages/users/${userId}/payments`, authConfig(token))
+      .then((r) => r.data),
 };
 
 /**
