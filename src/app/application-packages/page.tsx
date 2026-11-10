@@ -62,7 +62,7 @@ function formatAmount(minor: number, currency: string): string {
 }
 
 function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString();
 }
 
@@ -70,7 +70,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /* ------------------------------------------------------------------ */
-/* Status chips (presentation only — the API value stays authoritative) */
+/* Status chips (presentation only - the API value stays authoritative) */
 /* ------------------------------------------------------------------ */
 
 function Chip({
@@ -129,15 +129,15 @@ function allocationHoldNote(a: ApplicationAllocation): string | null {
     case "active":
       return null;
     case "refund_review":
-      return "Under refund review — this is a pending review, not a completed refund.";
+      return "Under refund review - this is a pending review, not a completed refund.";
     case "dispute_review":
-      return "Under dispute review — pending; the entitlement stays unavailable while disputed.";
+      return "Under dispute review - pending; the entitlement stays unavailable while disputed.";
     case "pending":
-      return "Entitlement pending — remaining units are not spendable yet.";
+      return "Entitlement pending - remaining units are not spendable yet.";
     case "expired":
-      return "Entitlement expired — remaining units in this window are not spendable.";
+      return "Entitlement expired - remaining units in this window are not spendable.";
     case "cancelled":
-      return "Entitlement cancelled — remaining units are not spendable.";
+      return "Entitlement cancelled - remaining units are not spendable.";
   }
 }
 
@@ -205,7 +205,7 @@ function AccessStateCard({ err, onRetry }: { err: unknown; onRetry: () => void }
         <h3 className="text-lg font-medium mb-1">Application commerce is not enabled</h3>
         <p className="text-muted-foreground max-w-2xl mx-auto">
           The backend routes return 404 while <code>APPLICATION_COMMERCE_ENABLED=false</code>.
-          Nothing is wrong — the catalog, entitlements and payments stay hidden until the
+          Nothing is wrong - the catalog, entitlements and payments stay hidden until the
           commerce feature flag is switched on for the environment.
         </p>
       </div>
@@ -233,7 +233,7 @@ function SectionErrorNote({ err }: { err: unknown }) {
       <div className="leading-relaxed">
         <span className="font-medium">
           {status === 401
-            ? "Session expired — sign in again."
+            ? "Session expired - sign in again."
             : status === 403
               ? "Admin access required."
               : status === 404
@@ -386,7 +386,7 @@ export default function ApplicationPackagesPage() {
     {
       key: "package",
       header: "Package",
-      render: (p) => p.package_code ?? "—",
+      render: (p) => p.package_code ?? "-",
     },
     {
       key: "units",
@@ -450,7 +450,7 @@ export default function ApplicationPackagesPage() {
         <Info className="w-4 h-4 shrink-0 text-primary mt-0.5" />
         <div className="leading-relaxed">
           <strong className="text-foreground">Read-only surface.</strong> This section only
-          reports state. It cannot publish, price, activate, charge, refund or unlock anything —
+          reports state. It cannot publish, price, activate, charge, refund or unlock anything -
           checkout stays disabled and every price field is pending commercial approval. AI
           credit plans (
           <Link href="/plans" className="underline hover:text-foreground">
@@ -485,7 +485,7 @@ export default function ApplicationPackagesPage() {
                 </h3>
                 <p>
                   The backend catalog is empty. Packages appear here only when the backend
-                  provisions them — nothing is created from this admin surface.
+                  provisions them - nothing is created from this admin surface.
                 </p>
               </div>
             ) : (
@@ -518,7 +518,7 @@ export default function ApplicationPackagesPage() {
                         />
                       </div>
 
-                      {/* Draft configuration — the approval-pending contract itself. */}
+                      {/* Draft configuration - the approval-pending contract itself. */}
                       <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-xs space-y-1">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Amount</span>
@@ -530,12 +530,12 @@ export default function ApplicationPackagesPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Currency</span>
-                          <span className="font-medium">{cfg.currency ?? "—"}</span>
+                          <span className="font-medium">{cfg.currency ?? "-"}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Billing cadence</span>
                           <span className="font-medium">
-                            {cfg.billing_interval ?? "—"}
+                            {cfg.billing_interval ?? "-"}
                             {cfg.billing_interval_count !== null
                               ? ` ×${cfg.billing_interval_count}`
                               : ""}
@@ -614,7 +614,7 @@ export default function ApplicationPackagesPage() {
           {sessionUser && (
             <p className="text-xs text-muted-foreground">
               Signed in as {sessionUser.email}
-              {sessionUser.role ? ` (${sessionUser.role})` : ""} — 403 responses here mean the
+              {sessionUser.role ? ` (${sessionUser.role})` : ""} - 403 responses here mean the
               backing account lacks admin rights.
             </p>
           )}
@@ -646,7 +646,7 @@ export default function ApplicationPackagesPage() {
                       <span>
                         · remaining counts uses minus held minus consumed, but is{" "}
                         <strong className="text-foreground">not spendable</strong> unless the
-                        entitlement is active and the window is open — always trust this badge
+                        entitlement is active and the window is open - always trust this badge
                         over the raw count.
                       </span>
                     </div>
@@ -712,7 +712,7 @@ export default function ApplicationPackagesPage() {
                 ) : (
                   <EmptyNote>
                     <Users className="w-8 h-8 mb-2 text-muted-foreground/50" />
-                    No purchased application allocations for this user — the empty state stays
+                    No purchased application allocations for this user - the empty state stays
                     empty.
                   </EmptyNote>
                 )}
@@ -734,7 +734,7 @@ export default function ApplicationPackagesPage() {
                     <DataTable
                       columns={usageColumns}
                       data={usageEvents}
-                      keyExtractor={(e) => `${e.reservation_id}-${e.created_at}`}
+                      keyExtractor={(e) => `${e.reservation_id}-${e.status}-${e.created_at}`}
                       pageSize={10}
                     />
                   </>
@@ -757,7 +757,7 @@ export default function ApplicationPackagesPage() {
                   <>
                     <p className="text-xs text-muted-foreground">
                       Payment rows shown as recorded (max 200). Reported payment_status:{" "}
-                      <code>{allowance?.payment_status ?? "—"}</code>
+                      <code>{allowance?.payment_status ?? "-"}</code>
                     </p>
                     <DataTable
                       columns={purchaseColumns}
@@ -772,7 +772,7 @@ export default function ApplicationPackagesPage() {
                           {pendingReviews.length} purchase
                           {pendingReviews.length === 1 ? " is" : "s are"} under refund or
                           dispute review. These are <strong>pending reviews, not completed
-                          refunds</strong> — the entitlement stays unavailable until a
+                          refunds</strong> - the entitlement stays unavailable until a
                           commercial decision resolves the review.
                         </div>
                       </div>

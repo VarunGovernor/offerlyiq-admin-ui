@@ -4,7 +4,7 @@
  * These mirror the backend's app/schemas/application_packages.py one-to-one.
  * Application packages are an independent catalog: never coupled to AI-credit
  * plans, wallets or ledgers. Admin responses intentionally carry no price data
- * while pricing approval is pending — `DraftPackageConfiguration` keeps every
+ * while pricing approval is pending - `DraftPackageConfiguration` keeps every
  * approval-pending value null and publishing disabled. Do not invent values
  * client-side, and never use these types for the AI credit-plan surface
  * (see billings.ts and /plans).
@@ -100,7 +100,7 @@ export interface ApplicationAllocation {
 
 export interface UserAllowanceReport {
   allocations: ApplicationAllocation[];
-  /** Authoritative backend verdict — do not derive spendability client-side. */
+  /** Authoritative backend verdict - do not derive spendability client-side. */
   can_reserve: boolean;
   payment_status: string;
 }

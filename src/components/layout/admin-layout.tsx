@@ -53,7 +53,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         const s = await admin.getTicketsSummary(token);
         if (!cancelled) setOpenTickets(s.open || 0);
       } catch {
-        // silently ignore — badge is non-critical
+        // silently ignore - badge is non-critical
       }
     };
     load();

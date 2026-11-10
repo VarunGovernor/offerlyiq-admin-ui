@@ -335,7 +335,7 @@ export const admin = {
   updateTicket: (id: string, data: { status?: string; admin_note?: string | null }, token?: string) =>
     axiosMain.patch(`/admin/tickets/${id}`, data, authConfig(token)).then((r) => r.data),
 
-  // Desktop app downloads — see uploadToStorage() for the file itself
+  // Desktop app downloads - see uploadToStorage() for the file itself
   getAppDownloads: (token?: string): Promise<AppSlot[]> =>
     axiosMain.get("/admin/app-downloads", authConfig(token)).then((r) => r.data),
   createAppUploadUrl: (
@@ -353,7 +353,7 @@ export const admin = {
   removeAppDownload: (platform: AppPlatform, token?: string): Promise<void> =>
     axiosMain.delete(`/admin/app-downloads/${platform}`, authConfig(token)).then(() => undefined),
 
-  // Application packages — READ-ONLY draft commerce surface (Stage 5 contract).
+  // Application packages - READ-ONLY draft commerce surface (Stage 5 contract).
   // Independent of AI credit plans: never publishes, prices, activates charges
   // or mutates anything. Backend refuses these routes with 404 when
   // APPLICATION_COMMERCE_ENABLED=false, 403 for non-admins.
@@ -377,7 +377,7 @@ export const admin = {
  * PUT a file straight to cloud storage through a signed URL.
  *
  * Plain XHR rather than axiosMain: the request goes to storage, not our API, so it must
- * carry no Authorization header and no base URL — and XHR is what reports upload
+ * carry no Authorization header and no base URL - and XHR is what reports upload
  * progress. Send exactly the headers the API returned, or storage rejects the PUT.
  */
 export function uploadToStorage(
@@ -401,12 +401,12 @@ export function uploadToStorage(
         reject(
           new Error(
             xhr.status === 403
-              ? "Storage refused the upload — the link may have expired. Try again."
+              ? "Storage refused the upload - the link may have expired. Try again."
               : `Upload failed (${xhr.status})`,
           ),
         );
     };
-    xhr.onerror = () => reject(new Error("Upload failed — check your connection and try again."));
+    xhr.onerror = () => reject(new Error("Upload failed - check your connection and try again."));
     xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
     signal?.addEventListener("abort", () => xhr.abort(), { once: true });
     xhr.send(file);
