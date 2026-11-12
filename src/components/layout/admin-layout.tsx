@@ -26,6 +26,7 @@ const navItems = [
   { href: "/users", label: "Users", icon: Users },
   { href: "/plans", label: "Plans", icon: Package },
   { href: "/application-packages", label: "Application Packages", icon: Layers },
+  { href: "/application-pricing", label: "Application Pricing", icon: Tags },
   { href: "/catalog", label: "Catalog", icon: Settings },
   { href: "/discounts", label: "Discounts", icon: Tags },
   { href: "/billing", label: "Billing Ops", icon: CreditCard },
@@ -176,7 +177,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 </span>
                 <div>
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${
-                    user.role === 'superadmin' ? 'bg-purple-500/20 text-purple-600' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                    user.role === 'superadmin' ? 'bg-purple-500/20 text-purple-800 dark:text-purple-300' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
                   }`}>
                     {user.role}
                   </span>

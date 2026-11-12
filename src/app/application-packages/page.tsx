@@ -429,7 +429,7 @@ export default function ApplicationPackagesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-1">Application Packages</h1>
           <p className="text-muted-foreground">
-            Draft, read-only monitoring for application-launch commerce.
+            Application allowances, usage and payment records.
           </p>
         </div>
         <Button
@@ -447,9 +447,9 @@ export default function ApplicationPackagesPage() {
       <div className="flex items-start gap-2 p-3 rounded-lg border border-border bg-muted/30 text-sm text-muted-foreground">
         <Info className="w-4 h-4 shrink-0 text-primary mt-0.5" />
         <div className="leading-relaxed">
-          <strong className="text-foreground">Read-only surface.</strong> This section only
-          reports state. It cannot publish, price, activate, charge, refund or unlock anything -
-          checkout stays disabled and every price field is pending commercial approval. AI
+          <strong className="text-foreground">Read-only monitoring.</strong> Manage regional prices and approval requests in the{" "}
+          <Link href="/application-pricing" className="underline hover:text-foreground">pricing workspace</Link>.{" "}
+          Price publication does not enable checkout. AI
           credit plans (
           <Link href="/plans" className="underline hover:text-foreground">
             /plans

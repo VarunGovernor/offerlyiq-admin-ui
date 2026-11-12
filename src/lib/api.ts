@@ -1,3 +1,4 @@
+import type { ApplicationPricingCatalog, ApplicationPricingHistory, PriceChangeRequest, PriceProposal, PublishedPrice } from "@/types/applicationPricing";
 import type { TokenResponse, User, MessageResponse } from "@/types/auth";
 import axiosMain from "@/lib/axiosMain";
 import type { AppPlatform, AppSlot, AppUploadTicket } from "@/types/app-downloads";
@@ -56,6 +57,18 @@ const authConfig = (token?: string) =>
   token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
 
 export const admin = {
+  getApplicationPricing: (token?: string) =>
+    axiosMain.get<ApplicationPricingCatalog>("/admin/application-pricing", authConfig(token)).then((r) => r.data),
+  proposeApplicationPrice: (data: PriceChangeRequest, token?: string) =>
+    axiosMain.post<PriceProposal>("/admin/application-pricing/proposals", data, authConfig(token)).then((r) => r.data),
+  publishApplicationPrice: (data: PriceChangeRequest, token?: string) =>
+    axiosMain.post<PublishedPrice>("/admin/application-pricing/publish", data, authConfig(token)).then((r) => r.data),
+  reviewApplicationPrice: (id: string, action: "approve" | "reject", reason: string, token?: string) =>
+    axiosMain.post<PriceProposal>(`/admin/application-pricing/proposals/${id}/${action}`, { reason }, authConfig(token)).then((r) => r.data),
+  getApplicationPricingHistory: (token?: string, packageId?: string) =>
+    axiosMain.get<ApplicationPricingHistory>("/admin/application-pricing/history", {
+      ...authConfig(token), params: packageId ? { package_id: packageId } : undefined,
+    }).then((r) => r.data),
   // Analytics
   overview: (
     token?: string,
