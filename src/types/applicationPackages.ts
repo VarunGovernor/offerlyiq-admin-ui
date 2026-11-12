@@ -75,6 +75,7 @@ export interface AdminPurchaseRow {
   quota_type: QuotaType;
   amount_minor: number;
   currency: string;
+  currency_exponent?: number;
   status: PurchaseStatus;
   starts_at: string | null;
   ends_at: string | null;

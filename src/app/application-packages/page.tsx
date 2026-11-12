@@ -45,20 +45,19 @@ import type {
 /* Formatting helpers (derived from the data; nothing is invented)     */
 /* ------------------------------------------------------------------ */
 
-/** Same minor-unit exponent convention the Plans page uses
- * (JPY/KRW/TWD have no minor unit; KWD has three digits). */
-const CURRENCY_MINOR_UNIT_EXPONENTS: Record<string, number> = {
-  JPY: 0, KRW: 0, TWD: 0, KWD: 3,
-};
-
-function formatAmount(minor: number, currency: string): string {
-  const exponent = CURRENCY_MINOR_UNIT_EXPONENTS[currency] ?? 2;
-  const major = minor / Math.pow(10, exponent);
-  const majorText = major.toLocaleString(undefined, {
-    minimumFractionDigits: exponent,
-    maximumFractionDigits: exponent,
+function formatAmount(minor: number, currency: string, exponent?: number): string {
+  const code = currency.toUpperCase();
+  // Older purchase responses omit the exponent; TWD used zero decimals in that contract.
+  const digits = exponent ?? (code === "TWD" ? 0 : new Intl.NumberFormat(undefined, {
+    style: "currency", currency: code,
+  }).resolvedOptions().maximumFractionDigits ?? 2);
+  const formatter = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: code,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   });
-  return `${majorText} ${currency}`;
+  return `${formatter.format(minor / 10 ** digits)} (${code})`;
 }
 
 function formatDateTime(iso: string | null | undefined): string {
@@ -204,9 +203,8 @@ function AccessStateCard({ err, onRetry }: { err: unknown; onRetry: () => void }
         <Info className="w-10 h-10 mx-auto mb-4 text-primary/70" />
         <h3 className="text-lg font-medium mb-1">Application commerce is not enabled</h3>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          The backend routes return 404 while <code>APPLICATION_COMMERCE_ENABLED=false</code>.
-          Nothing is wrong - the catalog, entitlements and payments stay hidden until the
-          commerce feature flag is switched on for the environment.
+          Application packages are unavailable in this environment. Contact the service
+          owner if you expected access.
         </p>
       </div>
     );
@@ -401,7 +399,7 @@ export default function ApplicationPackagesPage() {
     {
       key: "amount",
       header: "Amount",
-      render: (p) => formatAmount(p.amount_minor, p.currency),
+      render: (p) => formatAmount(p.amount_minor, p.currency, p.currency_exponent),
     },
     {
       key: "status",
@@ -590,16 +588,20 @@ export default function ApplicationPackagesPage() {
             }}
           >
             <div className="flex-1">
+              <label htmlFor="application-customer-id" className="sr-only">Customer user ID</label>
               <input
+                id="application-customer-id"
                 type="text"
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
                 placeholder="User ID (UUID)"
                 className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
                 spellCheck={false}
+                aria-invalid={Boolean(customerIdError)}
+                aria-describedby={customerIdError ? "application-customer-id-error" : undefined}
               />
               {customerIdError && (
-                <p className="text-xs text-red-400 mt-1">{customerIdError}</p>
+                <p id="application-customer-id-error" role="alert" className="text-xs text-red-400 mt-1">{customerIdError}</p>
               )}
             </div>
             <Button type="submit" className="gap-2" disabled={customerLoading}>
@@ -728,7 +730,7 @@ export default function ApplicationPackagesPage() {
                 ) : usageEvents && usageEvents.length > 0 ? (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Most recent first {usageEvents.length >= 200 ? "(first 200 of a longer trail)" : ""}.
+                      Oldest first {usageEvents.length >= 200 ? "(first 200 of a longer trail)" : ""}.
                       Rows are an immutable audit trail; nothing here can be edited.
                     </p>
                     <DataTable
