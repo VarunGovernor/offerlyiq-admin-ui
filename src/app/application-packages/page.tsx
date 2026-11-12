@@ -82,11 +82,11 @@ function Chip({
   label?: string;
 }) {
   const toneClass = {
-    ok: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-    warn: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-    bad: "bg-red-500/10 text-red-400 border-red-500/30",
-    muted: "bg-muted text-muted-foreground border-border",
-    info: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+    ok: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+    warn: "bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-500/30",
+    bad: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30",
+    muted: "bg-muted text-zinc-600 dark:text-muted-foreground border-border",
+    info: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30",
   }[tone];
   return (
     <Badge variant="outline" className={`border font-medium ${toneClass}`}>
@@ -187,7 +187,7 @@ function AccessStateCard({ err, onRetry }: { err: unknown; onRetry: () => void }
   if (status === 403) {
     return (
       <div className="col-span-full p-8 bg-card rounded-xl border border-border text-center">
-        <Ban className="w-10 h-10 mx-auto mb-4 text-red-400/70" />
+        <Ban className="w-10 h-10 mx-auto mb-4 text-red-700 dark:text-red-400/70" />
         <h3 className="text-lg font-medium mb-1">Admin access required</h3>
         <p className="text-muted-foreground">
           This account is not an admin. The application-package surface is restricted to admin
@@ -212,7 +212,7 @@ function AccessStateCard({ err, onRetry }: { err: unknown; onRetry: () => void }
 
   return (
     <div className="col-span-full p-8 bg-card rounded-xl border border-border text-center">
-      <AlertTriangle className="w-10 h-10 mx-auto mb-4 text-amber-400/80" />
+      <AlertTriangle className="w-10 h-10 mx-auto mb-4 text-amber-800 dark:text-amber-400/80" />
       <h3 className="text-lg font-medium mb-1">Could not load application packages</h3>
       <p className="text-muted-foreground mb-4">{detail || "An unexpected error occurred."}</p>
       <Button variant="outline" className="gap-2" onClick={onRetry}>
@@ -226,7 +226,7 @@ function SectionErrorNote({ err }: { err: unknown }) {
   const status = getApiErrorStatus(err);
   const detail = getApiErrorDetail(err);
   return (
-    <div className="flex items-start gap-2 p-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 text-sm">
+    <div className="flex items-start gap-2 p-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400 text-sm">
       <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
       <div className="leading-relaxed">
         <span className="font-medium">
@@ -496,7 +496,7 @@ export default function ApplicationPackagesPage() {
                         <CardTitle className="text-base">{pkg.name}</CardTitle>
                         <Badge
                           variant="outline"
-                          className="border bg-muted text-muted-foreground font-mono text-xs uppercase"
+                          className="border bg-muted text-zinc-600 dark:text-muted-foreground font-mono text-xs uppercase"
                           title={`package code: ${pkg.code}`}
                         >
                           {pkg.code}
@@ -547,7 +547,7 @@ export default function ApplicationPackagesPage() {
                           <span className="text-muted-foreground">Checkout</span>
                           <span
                             className={`inline-flex items-center gap-1 font-medium ${
-                              cfg.checkout_enabled ? "text-amber-400" : "text-muted-foreground"
+                              cfg.checkout_enabled ? "text-amber-800 dark:text-amber-400" : "text-muted-foreground"
                             }`}
                           >
                             <Lock className="w-3 h-3" />
@@ -601,10 +601,10 @@ export default function ApplicationPackagesPage() {
                 aria-describedby={customerIdError ? "application-customer-id-error" : undefined}
               />
               {customerIdError && (
-                <p id="application-customer-id-error" role="alert" className="text-xs text-red-400 mt-1">{customerIdError}</p>
+                <p id="application-customer-id-error" role="alert" className="text-xs text-red-700 dark:text-red-400 mt-1">{customerIdError}</p>
               )}
             </div>
-            <Button type="submit" className="gap-2" disabled={customerLoading}>
+            <Button type="submit" className="gap-2 text-zinc-950" disabled={customerLoading}>
               {customerLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
@@ -679,7 +679,7 @@ export default function ApplicationPackagesPage() {
                                 tone={entitlementTone(a.entitlement_status)}
                               />
                             </div>
-                            <div className="grid grid-cols-4 gap-2 text-center">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                               {[
                                 { label: "units", value: a.units },
                                 { label: "held", value: a.held },
@@ -701,7 +701,7 @@ export default function ApplicationPackagesPage() {
                               period_key: <code>{a.period_key}</code>
                             </div>
                             {hold && (
-                              <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
+                              <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs">
                                 <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                                 <span>{hold}</span>
                               </div>
@@ -768,7 +768,7 @@ export default function ApplicationPackagesPage() {
                       pageSize={10}
                     />
                     {pendingReviews.length > 0 && (
-                      <div className="flex items-start gap-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-400 text-xs">
+                      <div className="flex items-start gap-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-800 dark:text-amber-400 text-xs">
                         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                         <div className="leading-relaxed">
                           {pendingReviews.length} purchase

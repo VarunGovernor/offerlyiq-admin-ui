@@ -71,9 +71,9 @@ export function DataTable<T>({
   return (
     <div className="w-full space-y-4">
       <div className="bg-background/40 border border-border backdrop-blur-xl rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring" tabIndex={0} role="region" aria-label="Scrollable data table">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-muted-foreground uppercase bg-foreground/5 border-b border-border/50">
+            <thead className="text-xs text-zinc-600 dark:text-muted-foreground uppercase bg-foreground/5 border-b border-border/50">
               <tr>
                 {columns.map((col) => (
                   <th
