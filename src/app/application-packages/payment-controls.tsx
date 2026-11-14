@@ -75,6 +75,7 @@ export default function PaymentControls({ canModify, onChange }: { canModify: bo
         const item = state.switches[key];
         return <div key={key} className="space-y-3 rounded-lg border p-4">
           <div className="flex items-start justify-between gap-3"><h3 className="font-semibold">{labels[key]}</h3><button type="button" role="switch" aria-label={labels[key]} aria-checked={item.enabled} disabled={!canModify || !state.can_modify || loading || busy || !!error} className="shrink-0 rounded-full border px-3 py-1 text-sm font-semibold disabled:opacity-60" onClick={() => { setSelected(key); setProposal({ version: state.version, enabled: !item.enabled }); setReason(""); setMessage(""); }}>{item.enabled ? "ON" : "OFF"}</button></div>
+          {key === "refunds" && !state.refund_execution_available && <p className="text-sm">Execution endpoint unavailable in this build. This switch records configuration only.</p>}
           <p className="text-sm">Effective server state: <strong>{item.effective ? "ON" : "OFF"}</strong></p>
           {item.blockers.length > 0 && <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">{item.blockers.map(blocker => <li key={blocker}>{blocker}</li>)}</ul>}
         </div>;
