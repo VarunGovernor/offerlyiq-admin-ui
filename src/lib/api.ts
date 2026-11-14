@@ -373,7 +373,6 @@ export const admin = {
   getApplicationSubscriptions: (userId: string, token?: string) =>
     axiosMain.get(`/admin/application-packages/users/${userId}/subscriptions`, authConfig(token)).then(r => r.data),
   getApplicationRefundExecution: (id: string, token?: string) => axiosMain.get(`/admin/application-packages/refund-requests/${id}/execution`, authConfig(token)).then(r => r.data),
-  executeApplicationRefund: (id: string, reason: string, refundableBasisMinor: number, token?: string) => axiosMain.post(`/admin/application-packages/refund-requests/${id}/execute`, { reason, refundable_basis_minor: refundableBasisMinor }, authConfig(token)).then(r => r.data),
   getApplicationRefundRequests: (token?: string) =>
     axiosMain.get("/admin/application-packages/refund-requests", authConfig(token)).then(r => r.data),
   reviewApplicationRefund: (id: string, decision: "approved" | "rejected", reason: string, token?: string) =>
