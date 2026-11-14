@@ -51,7 +51,7 @@ async function refreshAccessToken(): Promise<string> {
       const { data } = await axios.post<{
         access_token: string;
         refresh_token: string;
-      }>(`${API_URL}/auth/refresh`, { refresh_token: refreshToken });
+      }>(`${API_URL}/auth/refresh`, { refresh_token: refreshToken }, { timeout: 30000 });
       setTokens(data.access_token, data.refresh_token);
       return data.access_token;
     })().finally(() => {

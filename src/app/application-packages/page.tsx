@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import RefundReviews from "./refund-reviews";
+import PaymentControls from "./payment-controls";
 import { admin } from "@/lib/api";
 import {
   Card,
@@ -456,7 +457,7 @@ export default function ApplicationPackagesPage() {
       <div className="flex items-start gap-2 p-3 rounded-lg border border-border bg-muted/30 text-sm text-muted-foreground">
         <Info className="w-4 h-4 shrink-0 text-primary mt-0.5" />
         <div className="leading-relaxed">
-          <strong className="text-foreground">Application commerce.</strong> Refund decisions record reviews only; they never issue money. Manage regional prices and approval requests in the{" "}
+          <strong className="text-foreground">Application commerce.</strong> Refund reviews and execution are separate actions. Manage regional prices and approval requests in the{" "}
           <Link href="/application-pricing" className="underline hover:text-foreground">pricing workspace</Link>.{" "}
           Price publication does not enable checkout. AI
           credit plans (
@@ -467,6 +468,7 @@ export default function ApplicationPackagesPage() {
         </div>
       </div>
 
+      <PaymentControls canModify={sessionUser?.role === "superadmin"} />
       {/* Catalog */}
       <Card>
         <CardHeader>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import RefundExecution from "./refund-execution";
 import { admin } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { getApiErrorDetail } from "@/lib/utils";
@@ -53,6 +54,7 @@ export default function RefundReviews({ canReview }: { canReview: boolean }) {
         {row.assessment?.state && <p>Assessment: {row.assessment.state.replaceAll("_", " ")}</p>}
         {row.review_reason && <p>Review reason: {row.review_reason}</p>}
         {canReview && row.status === "pending" && (selected === row.id ? <div className="space-y-2"><label className="block space-y-1"><span>Decision reason</span><textarea maxLength={1000} disabled={busy} className="w-full rounded-md border bg-background p-3" value={reason} onChange={event => setReason(event.target.value)} /></label><div className="flex flex-wrap gap-2"><Button disabled={busy || !reason.trim()} onClick={() => void review("approved")}>Approve review</Button><Button variant="outline" disabled={busy || !reason.trim()} onClick={() => void review("rejected")}>Reject review</Button><Button variant="outline" disabled={busy} onClick={() => { setSelected(null); setReason(""); }}>Cancel</Button></div></div> : <Button variant="outline" disabled={busy || loading} onClick={() => { setSelected(row.id); setReason(""); }}>Review request</Button>)}
+        {canReview && row.status === "approved" && <RefundExecution requestId={row.id} />}
       </div>)}
     </CardContent>
   </Card>;

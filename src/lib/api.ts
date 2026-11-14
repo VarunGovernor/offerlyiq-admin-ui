@@ -1,3 +1,4 @@
+import type { PaymentOperations, PaymentOperation, OperationAudit } from "@/types/paymentOperations";
 import type { ApplicationPricingCatalog, ApplicationPricingHistory, PriceChangeRequest, PriceProposal, PublishedPrice } from "@/types/applicationPricing";
 import type { TokenResponse, User, MessageResponse } from "@/types/auth";
 import axiosMain from "@/lib/axiosMain";
@@ -57,6 +58,9 @@ const authConfig = (token?: string) =>
   token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
 
 export const admin = {
+  getPaymentOperations: (token?: string) => axiosMain.get<PaymentOperations>("/admin/application-packages/operations", authConfig(token)).then(r => r.data),
+  updatePaymentOperations: (version: number, changes: Partial<Record<PaymentOperation, boolean>>, reason: string, confirmProduction: boolean, token?: string) => axiosMain.patch<PaymentOperations>("/admin/application-packages/operations", { version, changes, reason, confirm_production: confirmProduction }, authConfig(token)).then(r => r.data),
+  getPaymentOperationAudit: (token?: string) => axiosMain.get<{ events: OperationAudit[] }>("/admin/application-packages/operations/audit", authConfig(token)).then(r => r.data),
   getApplicationPricing: (token?: string) =>
     axiosMain.get<ApplicationPricingCatalog>("/admin/application-pricing", authConfig(token)).then((r) => r.data),
   proposeApplicationPrice: (data: PriceChangeRequest, token?: string) =>
@@ -368,6 +372,8 @@ export const admin = {
 
   getApplicationSubscriptions: (userId: string, token?: string) =>
     axiosMain.get(`/admin/application-packages/users/${userId}/subscriptions`, authConfig(token)).then(r => r.data),
+  getApplicationRefundExecution: (id: string, token?: string) => axiosMain.get(`/admin/application-packages/refund-requests/${id}/execution`, authConfig(token)).then(r => r.data),
+  executeApplicationRefund: (id: string, reason: string, refundableBasisMinor: number, token?: string) => axiosMain.post(`/admin/application-packages/refund-requests/${id}/execute`, { reason, refundable_basis_minor: refundableBasisMinor }, authConfig(token)).then(r => r.data),
   getApplicationRefundRequests: (token?: string) =>
     axiosMain.get("/admin/application-packages/refund-requests", authConfig(token)).then(r => r.data),
   reviewApplicationRefund: (id: string, decision: "approved" | "rejected", reason: string, token?: string) =>
