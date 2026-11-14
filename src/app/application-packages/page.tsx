@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import RefundReviews from "./refund-reviews";
 import { admin } from "@/lib/api";
 import {
   Card,
@@ -259,6 +260,9 @@ function EmptyNote({ children }: { children: React.ReactNode }) {
 export default function ApplicationPackagesPage() {
   const { user: sessionUser } = useAdminSession();
 
+  const [subscriptions, setSubscriptions] = useState<Array<{ id: string; status: string; interval_days: number; units: number; amount_minor: number; currency: string; cancel_at_period_end: boolean; current_period_end: string | null; next_renewal_at: string | null }>>([]);
+  const [subscriptionError, setSubscriptionError] = useState<unknown>(null);
+
   // Catalog
   const [packages, setPackages] = useState<AdminPackageItem[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -311,14 +315,17 @@ export default function ApplicationPackagesPage() {
     setUsageError(null);
     setPurchases(null);
     setPaymentsError(null);
+    setSubscriptions([]);
+    setSubscriptionError(null);
 
     try {
       const { getAccessToken } = await import("@/lib/auth");
       const token = getAccessToken() || undefined;
-      const [report, usage, payments] = await Promise.allSettled([
+      const [report, usage, payments, renewals] = await Promise.allSettled([
         admin.getApplicationPackageUserReport(id, token),
         admin.getApplicationPackageUserUsage(id, token),
         admin.getApplicationPackageUserPayments(id, token),
+        admin.getApplicationSubscriptions(id, token),
       ]);
       if (report.status === "fulfilled") setAllowance(report.value);
       else setAllowanceError(report.reason);
@@ -326,6 +333,8 @@ export default function ApplicationPackagesPage() {
       else setUsageError(usage.reason);
       if (payments.status === "fulfilled") setPurchases(payments.value.purchases ?? []);
       else setPaymentsError(payments.reason);
+      if (renewals.status === "fulfilled") setSubscriptions(renewals.value.subscriptions ?? []);
+      else setSubscriptionError(renewals.reason);
     } finally {
       setCustomerLoading(false);
       setCustomerLoaded(true);
@@ -447,7 +456,7 @@ export default function ApplicationPackagesPage() {
       <div className="flex items-start gap-2 p-3 rounded-lg border border-border bg-muted/30 text-sm text-muted-foreground">
         <Info className="w-4 h-4 shrink-0 text-primary mt-0.5" />
         <div className="leading-relaxed">
-          <strong className="text-foreground">Read-only monitoring.</strong> Manage regional prices and approval requests in the{" "}
+          <strong className="text-foreground">Application commerce.</strong> Refund decisions record reviews only; they never issue money. Manage regional prices and approval requests in the{" "}
           <Link href="/application-pricing" className="underline hover:text-foreground">pricing workspace</Link>.{" "}
           Price publication does not enable checkout. AI
           credit plans (
@@ -567,6 +576,8 @@ export default function ApplicationPackagesPage() {
           </div>
         </CardContent>
       </Card>
+
+      <RefundReviews canReview={sessionUser?.role === "superadmin"} />
 
       {/* Customer lookup */}
       <Card>
@@ -719,6 +730,16 @@ export default function ApplicationPackagesPage() {
                   </EmptyNote>
                 )}
               </div>
+
+              <section aria-label="Customer subscriptions" className="space-y-2">
+                <h3 className="text-sm font-semibold">Application subscriptions</h3>
+                {subscriptionError ? <SectionErrorNote err={subscriptionError} /> : subscriptions.length === 0 ? <p>No recurring application packages.</p> : subscriptions.map(row => <div key={row.id} className="rounded-lg border p-4 space-y-1 text-sm">
+                  <p>{row.units} applications · {formatAmount(row.amount_minor, row.currency)} every {row.interval_days} days</p>
+                  <p>Status: {row.status}</p>
+                  <p>Current paid period ends: {formatDateTime(row.current_period_end)}</p>
+                  <p>{row.cancel_at_period_end ? "Future renewals cancelled; current paid period preserved." : `Next renewal: ${formatDateTime(row.next_renewal_at)}`}</p>
+                </div>)}
+              </section>
 
               {/* Usage history */}
               <div className="space-y-2">

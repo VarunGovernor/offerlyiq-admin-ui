@@ -366,10 +366,12 @@ export const admin = {
   removeAppDownload: (platform: AppPlatform, token?: string): Promise<void> =>
     axiosMain.delete(`/admin/app-downloads/${platform}`, authConfig(token)).then(() => undefined),
 
-  // Application packages - READ-ONLY draft commerce surface (Stage 5 contract).
-  // Independent of AI credit plans: never publishes, prices, activates charges
-  // or mutates anything. Backend refuses these routes with 404 when
-  // APPLICATION_COMMERCE_ENABLED=false, 403 for non-admins.
+  getApplicationSubscriptions: (userId: string, token?: string) =>
+    axiosMain.get(`/admin/application-packages/users/${userId}/subscriptions`, authConfig(token)).then(r => r.data),
+  getApplicationRefundRequests: (token?: string) =>
+    axiosMain.get("/admin/application-packages/refund-requests", authConfig(token)).then(r => r.data),
+  reviewApplicationRefund: (id: string, decision: "approved" | "rejected", reason: string, token?: string) =>
+    axiosMain.post(`/admin/application-packages/refund-requests/${id}/review`, { decision, reason }, authConfig(token)).then(r => r.data),
   getApplicationPackages: (token?: string): Promise<AdminPackageCatalog> =>
     axiosMain.get("/admin/application-packages", authConfig(token)).then((r) => r.data),
   getApplicationPackageUserReport: (userId: string, token?: string): Promise<UserAllowanceReport> =>
