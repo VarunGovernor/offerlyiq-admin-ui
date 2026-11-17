@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { admin } from "@/lib/api";
 import { 
   Card, 
@@ -49,6 +49,7 @@ export default function DiscountsPage() {
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [showRedemptionsModal, setShowRedemptionsModal] = useState(false);
   const [redemptionsLoading, setRedemptionsLoading] = useState(false);
+  const redemptionsRequest = useRef(0);
   const [redemptionsError, setRedemptionsError] = useState<string | null>(null);
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -104,7 +105,13 @@ export default function DiscountsPage() {
     }
   };
 
+  const closeRedemptions = () => {
+    redemptionsRequest.current += 1;
+    setShowRedemptionsModal(false);
+  };
+
   const handleViewRedemptions = async (discount: any) => {
+    const request = ++redemptionsRequest.current;
     setSelectedDiscount(discount);
     setShowRedemptionsModal(true);
     setRedemptionsLoading(true);
@@ -114,12 +121,12 @@ export default function DiscountsPage() {
       const { getAccessToken } = await import("@/lib/auth");
       const token = getAccessToken() || undefined;
       const response = await admin.getDiscountRedemptions(discount.id, token);
-      setRedemptions(response || []);
+      if (request === redemptionsRequest.current) setRedemptions(response || []);
     } catch (err) {
       console.error("Failed to fetch redemptions", err);
-      setRedemptionsError(err instanceof Error ? err.message : "Unable to load redemptions");
+      if (request === redemptionsRequest.current) setRedemptionsError(err instanceof Error ? err.message : "Unable to load redemptions");
     } finally {
-      setRedemptionsLoading(false);
+      if (request === redemptionsRequest.current) setRedemptionsLoading(false);
     }
   };
 
@@ -367,7 +374,7 @@ export default function DiscountsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-card w-full max-w-2xl p-6 rounded-lg shadow-lg border border-border relative">
             <button 
-              onClick={() => setShowRedemptionsModal(false)}
+              onClick={closeRedemptions}
               className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
             >
               <X className="w-5 h-5" />
@@ -395,7 +402,7 @@ export default function DiscountsPage() {
             </div>
             
             <div className="flex justify-end gap-2 mt-6">
-              <Button variant="outline" onClick={() => setShowRedemptionsModal(false)}>Close</Button>
+              <Button variant="outline" onClick={closeRedemptions}>Close</Button>
             </div>
           </div>
         </div>
