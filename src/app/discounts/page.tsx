@@ -14,6 +14,7 @@ import { Loader2, Plus, Trash2, Tag, Copy, Eye, X, Edit2, Check, History } from 
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { formatFlatDiscount, toMinorUnits } from "@/lib/discount-amount";
 
 const CopyCode = ({ code }: { code: string }) => {
   const [copied, setCopied] = useState(false);
@@ -119,11 +120,28 @@ export default function DiscountsPage() {
       const { getAccessToken } = await import("@/lib/auth");
       const token = getAccessToken() || undefined;
       const numericAmount = typeof createData.amount === "string" ? parseFloat(createData.amount) || 0 : createData.amount;
-      let finalValue: number | string = numericAmount;
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+        toast.error("Discount amount must be greater than zero");
+        return;
+      }
+      if (createData.kind === "percentage" && numericAmount > 100) {
+        toast.error("Percentage discounts cannot exceed 100%");
+        return;
+      }
+      if (
+        createData.kind !== "bonus_credits" &&
+        Number(createData.max_redemptions) <= 0
+      ) {
+        toast.error("Set a maximum number of uses for payment discounts");
+        return;
+      }
+      let finalValue: number = numericAmount;
       if (createData.kind === "percentage") {
-        finalValue = numericAmount * 100; // basis points
+        finalValue = Math.round(numericAmount * 100); // basis points
       } else if (createData.kind === "flat") {
-        finalValue = Math.round(numericAmount * 100); // minor units
+        finalValue = toMinorUnits(numericAmount, createData.currency_code);
+      } else {
+        finalValue = Math.round(numericAmount); // whole bonus credits
       }
 
       await admin.createDiscount({
@@ -209,7 +227,7 @@ export default function DiscountsPage() {
         const kind = discount.kind || discount.type;
         return (
           <span className="font-medium">
-            {kind === "percentage" ? `${val / 100}%` : kind === "bonus_credits" ? `${val} credits` : `${discount.currency_code || '$'} ${(val / 100).toFixed(2)}`}
+            {kind === "percentage" ? `${val / 100}%` : kind === "bonus_credits" ? `${val} credits` : formatFlatDiscount(Number(val), discount.currency_code || "USD")}
           </span>
         );
       },
@@ -396,7 +414,7 @@ export default function DiscountsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Amount ({createData.kind === "percentage" ? "%" : createData.kind === "bonus_credits" ? "credits" : "$"})
+                    Amount ({createData.kind === "percentage" ? "%" : createData.kind === "bonus_credits" ? "credits" : createData.currency_code})
                   </label>
                   <input type="number" value={createData.amount === "" ? "" : createData.amount} onChange={e => setCreateData({...createData, amount: e.target.value === "" ? ("" as any) : parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm" />
                 </div>
