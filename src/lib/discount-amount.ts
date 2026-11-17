@@ -1,59 +1,57 @@
-/** Monetary coupon amounts are integer minor units. Never silently round an
- * admin-supplied value: rounding 0.001 USD to 0 would mint a broken promotion.
- */
+/** Keep entered decimal text until conversion; binary floats must not silently
+ * round coupon values or erase unsupported precision. */
 export function currencyExponent(currency: string): number {
   const digits = new Intl.NumberFormat("en", {
     style: "currency",
     currency: currency.trim().toUpperCase(),
   }).resolvedOptions().maximumFractionDigits;
-  if (digits === undefined) {
-    throw new RangeError("Unsupported currency precision");
-  }
+  if (digits === undefined) throw new RangeError("Unsupported currency precision");
   return digits;
 }
 
-export function toMinorUnits(amount: number, currency: string): number {
+function exactUnits(value: number | string, digits: number, message: string): number {
+  const text = String(value).trim();
+  const match = /^(\d*)(?:\.(\d*))?$/.exec(text);
+  if (!match || (!match[1] && !match[2])) throw new RangeError(message);
+  const fraction = (match[2] || "").replace(/0+$/, "");
+  if (fraction.length > digits) throw new RangeError(message);
+  const units = BigInt(match[1] || "0") * BigInt(10) ** BigInt(digits)
+    + BigInt(fraction.padEnd(digits, "0") || "0");
+  if (units <= BigInt(0) || units > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new RangeError(message);
+  }
+  return Number(units);
+}
+
+export function toMinorUnits(amount: number | string, currency: string): number {
   const exponent = currencyExponent(currency);
-  const scaled = amount * 10 ** exponent;
-  const rounded = Math.round(scaled);
-  if (
-    !Number.isFinite(amount) ||
-    amount <= 0 ||
-    !Number.isSafeInteger(rounded) ||
-    rounded <= 0 ||
-    Math.abs(scaled - rounded) > 1e-7
-  ) {
-    throw new RangeError(
-      `Enter a positive amount with no more than ${exponent} decimal places for ${currency.toUpperCase()}`,
-    );
-  }
-  return rounded;
+  return exactUnits(amount, exponent,
+    `Enter a positive amount with no more than ${exponent} decimal places for ${currency.trim().toUpperCase()}`);
 }
 
-export function toBasisPoints(percent: number): number {
-  const scaled = percent * 100;
-  const rounded = Math.round(scaled);
-  if (
-    !Number.isFinite(percent) ||
-    percent <= 0 ||
-    percent > 100 ||
-    !Number.isSafeInteger(rounded) ||
-    Math.abs(scaled - rounded) > 1e-7
-  ) {
-    throw new RangeError("Enter a percentage from 0.01 to 100 with at most two decimal places");
-  }
-  return rounded;
+export function toBasisPoints(percent: number | string): number {
+  const message = "Enter a percentage from 0.01 to 100 with at most two decimal places";
+  const value = exactUnits(percent, 2, message);
+  if (value > 10000) throw new RangeError(message);
+  return value;
 }
 
-export function toWholeCredits(credits: number): number {
-  if (!Number.isSafeInteger(credits) || credits <= 0) {
-    throw new RangeError("Bonus credits must be a positive whole number");
-  }
-  return credits;
+export function toWholeCredits(credits: number | string): number {
+  return exactUnits(credits, 0, "Bonus credits must be a positive whole number");
 }
 
 export function formatFlatDiscount(amountMinor: number, currency: string): string {
   const code = currency.trim().toUpperCase();
   const digits = currencyExponent(code);
   return `${code} ${(amountMinor / 10 ** digits).toFixed(digits)}`;
+}
+
+export function toRedemptionCap(value: number | string, required: boolean): number | null {
+  const text = String(value).trim();
+  if (!required && (text === "" || /^0+(?:\.0*)?$/.test(text))) return null;
+  const cap = exactUnits(text, 0, required
+    ? "Payment discounts require a positive whole-number max-use cap"
+    : "Max uses must be zero (unlimited) or a positive whole number");
+  if (cap > 2147483647) throw new RangeError('Max uses must not exceed 2147483647');
+  return cap;
 }
