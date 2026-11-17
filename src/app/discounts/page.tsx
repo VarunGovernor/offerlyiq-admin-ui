@@ -14,7 +14,7 @@ import { Loader2, Plus, Trash2, Tag, Copy, Eye, X, Edit2, Check, History } from 
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { formatFlatDiscount, toMinorUnits } from "@/lib/discount-amount";
+import { formatFlatDiscount, toBasisPoints, toMinorUnits, toWholeCredits } from "@/lib/discount-amount";
 
 const CopyCode = ({ code }: { code: string }) => {
   const [copied, setCopied] = useState(false);
@@ -128,21 +128,20 @@ export default function DiscountsPage() {
         toast.error("Percentage discounts cannot exceed 100%");
         return;
       }
+      const maxUses = Number(createData.max_redemptions);
       if (
         createData.kind !== "bonus_credits" &&
-        Number(createData.max_redemptions) <= 0
+        (!Number.isSafeInteger(maxUses) || maxUses <= 0)
       ) {
-        toast.error("Set a maximum number of uses for payment discounts");
+        toast.error("Set a positive whole-number max-use cap for payment discounts");
         return;
       }
-      let finalValue: number = numericAmount;
-      if (createData.kind === "percentage") {
-        finalValue = Math.round(numericAmount * 100); // basis points
-      } else if (createData.kind === "flat") {
-        finalValue = toMinorUnits(numericAmount, createData.currency_code);
-      } else {
-        finalValue = Math.round(numericAmount); // whole bonus credits
-      }
+      const finalValue =
+        createData.kind === "percentage"
+          ? toBasisPoints(numericAmount)
+          : createData.kind === "flat"
+            ? toMinorUnits(numericAmount, createData.currency_code)
+            : toWholeCredits(numericAmount);
 
       await admin.createDiscount({
         code: createData.code,
@@ -150,7 +149,7 @@ export default function DiscountsPage() {
         kind: createData.kind,
         value: finalValue,
         ...(createData.kind === "flat" ? { currency_code: createData.currency_code } : {}),
-        max_redemptions: createData.max_redemptions || null,
+        max_redemptions: createData.kind === "bonus_credits" && !maxUses ? null : maxUses,
         expires_at: createData.expires_at ? new Date(createData.expires_at).toISOString() : null,
       }, token);
       setShowCreateModal(false);
@@ -159,7 +158,7 @@ export default function DiscountsPage() {
       fetchDiscounts();
     } catch (err: any) {
       console.error("Failed to create discount", err);
-      toast.error(err.response?.data?.detail || "Failed to create discount");
+      toast.error(err instanceof RangeError ? err.message : (err.response?.data?.detail || "Failed to create discount"));
     } finally {
       setCreateLoading(false);
     }
@@ -178,11 +177,21 @@ export default function DiscountsPage() {
   const handleSaveEdit = async () => {
     setEditLoading(true);
     try {
+      const cap = Number(editData.max_redemptions);
+      const isMoney = selectedDiscount?.kind !== "bonus_credits";
+      if (isMoney && (!Number.isSafeInteger(cap) || cap <= 0)) {
+        toast.error("Money discounts require a positive whole-number max-use cap");
+        return;
+      }
+      if (isMoney && cap <= (selectedDiscount?.redemptions_used ?? 0)) {
+        toast.error("Max uses must exceed the number already redeemed");
+        return;
+      }
       const { getAccessToken } = await import("@/lib/auth");
       const token = getAccessToken() || undefined;
       await admin.updateDiscount(selectedDiscount.id, {
         status: editData.status,
-        max_redemptions: editData.max_redemptions || null,
+        max_redemptions: isMoney ? cap : (cap > 0 ? cap : null),
         expires_at: editData.expires_at ? new Date(editData.expires_at).toISOString() : null,
       }, token);
       setShowEditModal(false);
