@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { admin } from "@/lib/api";
 import { 
   Card, 
@@ -14,6 +14,7 @@ import { Loader2, Plus, Trash2, Tag, Copy, Eye, X, Edit2, Check, History } from 
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { formatFlatDiscount, toBasisPoints, toMinorUnits, toWholeCredits, toRedemptionCap } from "@/lib/discount-amount";
 
 const CopyCode = ({ code }: { code: string }) => {
   const [copied, setCopied] = useState(false);
@@ -42,13 +43,17 @@ const CopyCode = ({ code }: { code: string }) => {
 export default function DiscountsPage() {
   const [discounts, setDiscounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedDiscount, setSelectedDiscount] = useState<any>(null);
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [showRedemptionsModal, setShowRedemptionsModal] = useState(false);
   const [redemptionsLoading, setRedemptionsLoading] = useState(false);
+  const redemptionsRequest = useRef(0);
+  const [redemptionsError, setRedemptionsError] = useState<string | null>(null);
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createData, setCreateData] = useState<{ code: string; name: string; kind: string; amount: number | string; currency_code: string; max_redemptions: number | string; expires_at: string }>({ code: "", name: "", kind: "percentage", amount: 0, currency_code: "USD", max_redemptions: 0, expires_at: "" });
@@ -60,6 +65,7 @@ export default function DiscountsPage() {
 
   const fetchDiscounts = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const { getAccessToken } = await import("@/lib/auth");
       const token = getAccessToken() || undefined;
@@ -67,6 +73,7 @@ export default function DiscountsPage() {
       setDiscounts(response || []);
     } catch (err) {
       console.error("Failed to fetch discounts", err);
+      setLoadError(err instanceof Error ? err.message : "Unable to load discounts");
     } finally {
       setLoading(false);
     }
@@ -81,35 +88,45 @@ export default function DiscountsPage() {
   };
 
   const confirmDelete = async () => {
-    if (!deleteConfirmId) return;
+    if (!deleteConfirmId || deleteLoading) return;
+    setDeleteLoading(true);
     try {
       const { getAccessToken } = await import("@/lib/auth");
       const token = getAccessToken() || undefined;
       await admin.deleteDiscount(deleteConfirmId, token);
-      toast.success("Discount deleted successfully");
+      toast.success("Discount disabled successfully");
+      setDeleteConfirmId(null);
       fetchDiscounts();
     } catch (err) {
       console.error("Failed to delete discount", err);
-      toast.error("Error deleting discount");
+      toast.error(err instanceof Error ? err.message : "Unable to disable discount");
     } finally {
-      setDeleteConfirmId(null);
+      setDeleteLoading(false);
     }
   };
 
+  const closeRedemptions = () => {
+    redemptionsRequest.current += 1;
+    setShowRedemptionsModal(false);
+  };
+
   const handleViewRedemptions = async (discount: any) => {
+    const request = ++redemptionsRequest.current;
     setSelectedDiscount(discount);
     setShowRedemptionsModal(true);
     setRedemptionsLoading(true);
+    setRedemptionsError(null);
+    setRedemptions([]);
     try {
       const { getAccessToken } = await import("@/lib/auth");
       const token = getAccessToken() || undefined;
       const response = await admin.getDiscountRedemptions(discount.id, token);
-      setRedemptions(response || []);
+      if (request === redemptionsRequest.current) setRedemptions(response || []);
     } catch (err) {
       console.error("Failed to fetch redemptions", err);
-      setRedemptions([]);
+      if (request === redemptionsRequest.current) setRedemptionsError(err instanceof Error ? err.message : "Unable to load redemptions");
     } finally {
-      setRedemptionsLoading(false);
+      if (request === redemptionsRequest.current) setRedemptionsLoading(false);
     }
   };
 
@@ -118,21 +135,21 @@ export default function DiscountsPage() {
     try {
       const { getAccessToken } = await import("@/lib/auth");
       const token = getAccessToken() || undefined;
-      const numericAmount = typeof createData.amount === "string" ? parseFloat(createData.amount) || 0 : createData.amount;
-      let finalValue: number | string = numericAmount;
-      if (createData.kind === "percentage") {
-        finalValue = numericAmount * 100; // basis points
-      } else if (createData.kind === "flat") {
-        finalValue = Math.round(numericAmount * 100); // minor units
-      }
+      const maxUses = toRedemptionCap(createData.max_redemptions, createData.kind !== "bonus_credits");
+      const finalValue =
+        createData.kind === "percentage"
+          ? toBasisPoints(createData.amount)
+          : createData.kind === "flat"
+            ? toMinorUnits(createData.amount, createData.currency_code)
+            : toWholeCredits(createData.amount);
 
       await admin.createDiscount({
         code: createData.code,
         name: createData.name,
         kind: createData.kind,
         value: finalValue,
-        ...(createData.kind === "flat" ? { currency_code: createData.currency_code } : {}),
-        max_redemptions: createData.max_redemptions || null,
+        ...(createData.kind === "flat" ? { currency_code: createData.currency_code.trim().toUpperCase() } : {}),
+        max_redemptions: maxUses,
         expires_at: createData.expires_at ? new Date(createData.expires_at).toISOString() : null,
       }, token);
       setShowCreateModal(false);
@@ -141,7 +158,7 @@ export default function DiscountsPage() {
       fetchDiscounts();
     } catch (err: any) {
       console.error("Failed to create discount", err);
-      toast.error(err.response?.data?.detail || "Failed to create discount");
+      toast.error(err instanceof Error ? err.message : "Failed to create discount");
     } finally {
       setCreateLoading(false);
     }
@@ -160,19 +177,38 @@ export default function DiscountsPage() {
   const handleSaveEdit = async () => {
     setEditLoading(true);
     try {
+      const originalCap = selectedDiscount.max_redemptions ?? selectedDiscount.max_uses ?? null;
+      const isMoney = (selectedDiscount.kind || selectedDiscount.type) !== "bonus_credits";
+      const cap = toRedemptionCap(editData.max_redemptions, false);
+      const capChanged = cap !== originalCap;
+      // Disable legacy uncapped codes without changing their commercial terms.
+      if (isMoney && (capChanged || editData.status === "active") && cap === null) {
+        throw new RangeError("Payment discounts require a positive whole-number max-use cap");
+      }
+      if (capChanged && cap !== null && cap < (selectedDiscount.redemptions_used ?? selectedDiscount.times_used ?? 0)) {
+        throw new RangeError("Max uses cannot be lower than the number already redeemed");
+      }
+      const changes: Record<string, unknown> = {};
+      if (editData.status !== selectedDiscount.status) changes.status = editData.status;
+      if (capChanged) changes.max_redemptions = cap;
+      const originalDate = selectedDiscount.expires_at
+        ? new Date(selectedDiscount.expires_at).toISOString().split("T")[0] : "";
+      if (editData.expires_at !== originalDate) {
+        changes.expires_at = editData.expires_at ? new Date(editData.expires_at).toISOString() : null;
+      }
+      if (Object.keys(changes).length === 0) {
+        setShowEditModal(false);
+        return;
+      }
       const { getAccessToken } = await import("@/lib/auth");
       const token = getAccessToken() || undefined;
-      await admin.updateDiscount(selectedDiscount.id, {
-        status: editData.status,
-        max_redemptions: editData.max_redemptions || null,
-        expires_at: editData.expires_at ? new Date(editData.expires_at).toISOString() : null,
-      }, token);
+      await admin.updateDiscount(selectedDiscount.id, changes, token);
       setShowEditModal(false);
       toast.success("Discount updated successfully");
       fetchDiscounts();
     } catch (err: any) {
       console.error("Failed to update discount", err);
-      toast.error(err.response?.data?.detail || "Failed to update discount");
+      toast.error(err instanceof Error ? err.message : "Failed to update discount");
     } finally {
       setEditLoading(false);
     }
@@ -209,7 +245,7 @@ export default function DiscountsPage() {
         const kind = discount.kind || discount.type;
         return (
           <span className="font-medium">
-            {kind === "percentage" ? `${val / 100}%` : kind === "bonus_credits" ? `${val} credits` : `${discount.currency_code || '$'} ${(val / 100).toFixed(2)}`}
+            {kind === "percentage" ? `${val / 100}%` : kind === "bonus_credits" ? `${val} credits` : formatFlatDiscount(Number(val), discount.currency_code || "USD")}
           </span>
         );
       },
@@ -315,7 +351,12 @@ export default function DiscountsPage() {
         </Button>
       </div>
 
-      <DataTable 
+      {loadError ? (
+        <div role="alert" className="rounded-md border border-destructive p-4">
+          <p>Unable to load discounts: {loadError}</p>
+          <Button variant="outline" onClick={fetchDiscounts}>Retry discounts</Button>
+        </div>
+      ) : <DataTable
         columns={discountColumns} 
         data={discounts} 
         isLoading={loading} 
@@ -326,14 +367,14 @@ export default function DiscountsPage() {
             <p>No discount codes found.</p>
           </div>
         }
-      />
+      />}
 
       {/* Redemptions Modal */}
       {showRedemptionsModal && selectedDiscount && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-card w-full max-w-2xl p-6 rounded-lg shadow-lg border border-border relative">
             <button 
-              onClick={() => setShowRedemptionsModal(false)}
+              onClick={closeRedemptions}
               className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
             >
               <X className="w-5 h-5" />
@@ -342,7 +383,12 @@ export default function DiscountsPage() {
             <p className="text-sm text-muted-foreground mb-4">View users who have redeemed this discount code.</p>
             
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-              <DataTable 
+              {redemptionsError ? (
+                <div role="alert" className="space-y-2">
+                  <p>Unable to load redemptions: {redemptionsError}</p>
+                  <Button variant="outline" onClick={() => handleViewRedemptions(selectedDiscount)}>Retry redemptions</Button>
+                </div>
+              ) : <DataTable
                 columns={redemptionColumns} 
                 data={redemptions} 
                 isLoading={redemptionsLoading} 
@@ -352,11 +398,11 @@ export default function DiscountsPage() {
                     No redemptions found for this discount yet.
                   </div>
                 }
-              />
+              />}
             </div>
             
             <div className="flex justify-end gap-2 mt-6">
-              <Button variant="outline" onClick={() => setShowRedemptionsModal(false)}>Close</Button>
+              <Button variant="outline" onClick={closeRedemptions}>Close</Button>
             </div>
           </div>
         </div>
@@ -396,9 +442,9 @@ export default function DiscountsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Amount ({createData.kind === "percentage" ? "%" : createData.kind === "bonus_credits" ? "credits" : "$"})
+                    Amount ({createData.kind === "percentage" ? "%" : createData.kind === "bonus_credits" ? "credits" : createData.currency_code})
                   </label>
-                  <input type="number" value={createData.amount === "" ? "" : createData.amount} onChange={e => setCreateData({...createData, amount: e.target.value === "" ? ("" as any) : parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm" />
+                  <input type="number" value={createData.amount === "" ? "" : createData.amount} onChange={e => setCreateData({...createData, amount: e.target.value})} className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm" />
                 </div>
               </div>
               {createData.kind === "flat" && (
@@ -410,7 +456,7 @@ export default function DiscountsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Max Uses (0 = unlimited, flat/percentage MUST have limit)</label>
-                  <input type="number" value={createData.max_redemptions === "" ? "" : createData.max_redemptions} onChange={e => setCreateData({...createData, max_redemptions: e.target.value === "" ? ("" as any) : parseInt(e.target.value) || 0})} className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm" />
+                  <input type="number" value={createData.max_redemptions === "" ? "" : createData.max_redemptions} onChange={e => setCreateData({...createData, max_redemptions: e.target.value})} className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Expires At (Optional)</label>
@@ -454,7 +500,7 @@ export default function DiscountsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Max Uses (0 = unlimited, flat/percentage MUST have limit)</label>
-                  <input type="number" value={editData.max_redemptions === "" ? "" : editData.max_redemptions} onChange={e => setEditData({...editData, max_redemptions: e.target.value === "" ? ("" as any) : parseInt(e.target.value) || 0})} className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm" />
+                  <input type="number" value={editData.max_redemptions === "" ? "" : editData.max_redemptions} onChange={e => setEditData({...editData, max_redemptions: e.target.value})} className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Expires At (Optional)</label>
@@ -476,10 +522,11 @@ export default function DiscountsPage() {
 
       <ConfirmModal
         isOpen={!!deleteConfirmId}
-        onClose={() => setDeleteConfirmId(null)}
+        onClose={() => { if (!deleteLoading) setDeleteConfirmId(null); }}
         onConfirm={confirmDelete}
         title="Disable Discount"
-        description="This will disable the discount code so no one can redeem it. Past redemptions are kept. This cannot be undone."
+        description="This stops new uses of the discount code. Past redemptions and payments already in progress are preserved."
+        isLoading={deleteLoading}
         confirmText="Disable"
         isDestructive={true}
       />
